@@ -32,8 +32,9 @@
 </head>
 <body>
 
-<div id="timeline"></div>
 <div id="legend"></div>
+<div id="timeline"></div>
+
 
 <script type="module">
   import CircularTimeline from 'https://unpkg.com/circalify@latest/src/index.js';
@@ -79,6 +80,7 @@
 [
   { name: 'Kamper', color: '#0078D4' },
   { name: 'Cuper', color: '#edbd4c' }
+  { name: 'Annet', color: '#cda2de' }
 ].forEach(ring => {
   const item = document.createElement('div');
   item.className = 'legend-item';
