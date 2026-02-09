@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Circalify Year Wheel Example</title>
+  <style>
+    body { font-family: sans-serif; }
+    #timeline { width: 600px; height: 600px; margin: auto; }
+  </style>
+</head>
+<body>
+
+<div id="timeline"></div>
+
+<script type="module">
+  import CircularTimeline from 'https://unpkg.com/circalify@latest/src/index.js';
+
+  const timeline = new CircularTimeline('#timeline', {
+    startYear: 2026,      // Year you want to visualize
+    startMonth: 0,        // 0 = January
+    numberOfMonths: 12,   // Full year
+    rings: [
+      // Base calendar ring (months)
+      { type: 'calendar' },
+      // Custom event ring
+      { type: 'data', name: 'Events', color: '#0078D4' }
+    ]
+  });
+
+  // Example event data — you can add as many as you like:
+  timeline.setData([
+    { label: 'Project start', startDate: '2026-01-15', endDate: '2026-01-15' },
+    { label: 'Quarter review', startDate: '2026-04-05', endDate: '2026-04-05' },
+    { label: 'Year end', startDate: '2026-12-30', endDate: '2026-12-30' }
+  ], 'Events');
+</script>
+
+</body>
+</html>
