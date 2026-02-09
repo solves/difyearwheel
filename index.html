@@ -15,6 +15,11 @@
 <script type="module">
   import CircularTimeline from 'https://unpkg.com/circalify@latest/src/index.js';
 
+    const events = await loadCSV(
+      'https://docs.google.com/spreadsheets/d/1ad2DsSE9ZqvgaHzglGBkivileGTSi12WTm-cRzlBE0c/export?format=csv'
+    );
+
+
   const timeline = new CircularTimeline('#timeline', {
     startYear: 2026,      // Year you want to visualize
     startMonth: 0,        // 0 = January
@@ -26,18 +31,17 @@
       { type: 'data', name: 'Cuper', color: '#edbd4c' }
     ]
   });
+  
+timeline.setData(
+  events.filter(e => e.ring === 'Cuper'),
+  'Cuper'
+);
 
-  // Example event data — you can add as many as you like:
-  timeline.setData([
-    { label: 'Slemmestad Cup', startDate: '2026-04-25', endDate: '2026-04-26' },
-    { label: 'Jutul Minicup', startDate: '2026-05-30', endDate: '2026-05-30' },
-    { label: 'Konnerud cup', startDate: '2026-06-20', endDate: '2026-06-21' }
-  ], 'Cuper');
+timeline.setData(
+  events.filter(e => e.ring === 'Kamper'),
+  'Kamper'
+);
 
-    timeline.setData([
-    { label: 'DIF Hvit', startDate: '2026-04-04', endDate: '2026-04-4' },
-    { label: 'DIF Blaa', startDate: '2026-04-06', endDate: '2026-04-06' },
-  ], 'Kamper');
 
 
 </script>
