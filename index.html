@@ -6,11 +6,34 @@
   <style>
     body { font-family: sans-serif; }
     #timeline { width: 600px; height: 600px; margin: auto; }
+
+  #legend {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 12px;
+    font-size: 13px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+    
   </style>
 </head>
 <body>
 
 <div id="timeline"></div>
+<div id="legend"></div>
 
 <script type="module">
   import CircularTimeline from 'https://unpkg.com/circalify@latest/src/index.js';
@@ -49,6 +72,29 @@
   timeline.setData(events.filter(e => e.ring === 'Cuper'), 'Cuper');
   timeline.setData(events.filter(e => e.ring === 'Kamper'), 'Kamper');
   timeline.setData(events.filter(e => e.ring === 'Annet'), 'Annet');
+
+
+  const legend = document.getElementById('legend');
+
+[
+  { name: 'Kamper', color: '#0078D4' },
+  { name: 'Cuper', color: '#edbd4c' }
+].forEach(ring => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+
+  const color = document.createElement('div');
+  color.className = 'legend-color';
+  color.style.background = ring.color;
+
+  const label = document.createElement('span');
+  label.textContent = ring.name;
+
+  item.appendChild(color);
+  item.appendChild(label);
+  legend.appendChild(item);
+});
+
 </script>
 
 
