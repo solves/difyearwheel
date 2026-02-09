@@ -40,6 +40,7 @@
     numberOfMonths: 12,
     rings: [
       { type: 'calendar' },
+      { type: 'data', name: 'Annet', color: '#cda2de' },
       { type: 'data', name: 'Kamper', color: '#0078D4' },
       { type: 'data', name: 'Cuper', color: '#edbd4c' }
     ]
@@ -47,6 +48,7 @@
 
   timeline.setData(events.filter(e => e.ring === 'Cuper'), 'Cuper');
   timeline.setData(events.filter(e => e.ring === 'Kamper'), 'Kamper');
+  timeline.setData(events.filter(e => e.ring === 'Annet'), 'Annet');
 </script>
 
 
