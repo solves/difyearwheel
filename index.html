@@ -2,14 +2,44 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>DIF 2026 Yearly Wheel</title>
+  <title>DIF 2026 Yearly Wheel with Now Indicator</title>
   <style>
     body { font-family: sans-serif; }
+
     #timeline { width: 600px; height: 600px; margin: auto; }
-    #legend { display: flex; justify-content: center; gap: 16px; margin-top: 12px; font-size: 13px; }
-    .legend-item { display: flex; align-items: center; gap: 6px; }
-    .legend-color { width: 12px; height: 12px; border-radius: 50%; }
-    #tooltip { position: fixed; pointer-events: none; background: rgba(0,0,0,0.85); color: white; padding: 6px 8px; font-size: 12px; border-radius: 4px; opacity: 0; transition: opacity 0.1s; z-index: 10; }
+
+    #legend {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    #tooltip {
+      position: fixed;
+      pointer-events: none;
+      background: rgba(0,0,0,0.85);
+      color: white;
+      padding: 6px 8px;
+      font-size: 12px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.1s;
+      z-index: 10;
+    }
   </style>
 </head>
 <body>
@@ -23,8 +53,8 @@ import CircularTimeline from 'https://unpkg.com/circalify@latest/src/index.js';
 import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm';
 
 const YEAR = 2026;
-const START_MONTH = 0;
 
+// --- Load CSV events ---
 async function loadCSV(url) {
   const response = await fetch(url);
   const text = await response.text();
@@ -35,29 +65,43 @@ const rawEvents = await loadCSV(
   'https://docs.google.com/spreadsheets/d/1ad2DsSE9ZqvgaHzglGBkivileGTSi12WTm-cRzlBE0c/export?format=csv'
 );
 
-const events = rawEvents.filter(e => e.ring).map(e => ({
-  ...e,
-  startDate: new Date(e.startDate),
-  endDate: new Date(e.endDate)
-}));
+const events = rawEvents
+  .filter(e => e.ring)
+  .map(e => ({
+    ...e,
+    startDate: new Date(e.startDate),
+    endDate: new Date(e.endDate)
+  }));
 
+// --- Create timeline ---
 const timeline = new CircularTimeline('#timeline', {
   startYear: YEAR,
-  startMonth: START_MONTH,
+  startMonth: 0,
   numberOfMonths: 12,
   rings: [
     { type: 'calendar' },
     { type: 'data', name: 'Annet', color: '#cda2de' },
     { type: 'data', name: 'Kamper', color: '#0078D4' },
-    { type: 'data', name: 'Cuper', color: '#edbd4c' }
+    { type: 'data', name: 'Cuper', color: '#edbd4c' },
+    { type: 'data', name: 'Now', color: '#e53935' } // NEW ring for "Now"
   ]
 });
 
-timeline.setData(events.filter(e => e.ring === 'Cuper').map(e => ({ ...e, _label: e.title })), 'Cuper');
-timeline.setData(events.filter(e => e.ring === 'Kamper').map(e => ({ ...e, _label: e.title })), 'Kamper');
-timeline.setData(events.filter(e => e.ring === 'Annet').map(e => ({ ...e, _label: e.title })), 'Annet');
+// --- Add CSV events ---
+timeline.setData(
+  events.filter(e => e.ring === 'Cuper').map(e => ({ ...e, _label: e.title })),
+  'Cuper'
+);
+timeline.setData(
+  events.filter(e => e.ring === 'Kamper').map(e => ({ ...e, _label: e.title })),
+  'Kamper'
+);
+timeline.setData(
+  events.filter(e => e.ring === 'Annet').map(e => ({ ...e, _label: e.title })),
+  'Annet'
+);
 
-// Tooltip
+// --- Tooltip ---
 const tooltip = document.getElementById('tooltip');
 requestAnimationFrame(() => {
   document.querySelectorAll('#timeline svg path').forEach(path => {
@@ -66,55 +110,61 @@ requestAnimationFrame(() => {
     const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
     title.textContent = label;
     path.appendChild(title);
-    path.addEventListener('mouseenter', () => { tooltip.textContent = label; tooltip.style.opacity = 1; });
-    path.addEventListener('mousemove', e => { tooltip.style.left = e.clientX + 10 + 'px'; tooltip.style.top = e.clientY + 10 + 'px'; });
-    path.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
+
+    path.addEventListener('mouseenter', () => {
+      tooltip.textContent = label;
+      tooltip.style.opacity = 1;
+    });
+    path.addEventListener('mousemove', e => {
+      tooltip.style.left = e.clientX + 10 + 'px';
+      tooltip.style.top = e.clientY + 10 + 'px';
+    });
+    path.addEventListener('mouseleave', () => {
+      tooltip.style.opacity = 0;
+    });
   });
 });
 
-// Legend
+// --- Legend ---
 const legend = document.getElementById('legend');
 [
   { name: 'Kamper', color: '#0078D4' },
   { name: 'Cuper', color: '#edbd4c' },
-  { name: 'Annet', color: '#cda2de' }
+  { name: 'Annet', color: '#cda2de' },
+  { name: 'Now', color: '#e53935' } // include "Now" in legend
 ].forEach(ring => {
-  const item = document.createElement('div'); item.className = 'legend-item';
-  const color = document.createElement('div'); color.className = 'legend-color'; color.style.background = ring.color;
-  const label = document.createElement('span'); label.textContent = ring.name;
-  item.appendChild(color); item.appendChild(label); legend.appendChild(item);
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+
+  const color = document.createElement('div');
+  color.className = 'legend-color';
+  color.style.background = ring.color;
+
+  const label = document.createElement('span');
+  label.textContent = ring.name;
+
+  item.appendChild(color);
+  item.appendChild(label);
+  legend.appendChild(item);
 });
 
-// Now indicator
-function addOrUpdateNowIndicator() {
-  const svg = document.querySelector('#timeline svg');
-  if (!svg) return;
+// --- Now indicator as a moving event ---
+function updateNowEvent() {
   const now = new Date();
-  if (now.getFullYear() !== YEAR) return;
-  const vb = svg.viewBox.baseVal;
-  const cx = vb.x + vb.width / 2;
-  const cy = vb.y + vb.height / 2;
-  const radius = Math.min(vb.width, vb.height) / 2;
-  const outerRadius = radius - 10;
-  const startRadius = outerRadius - 18;
-  const month = now.getMonth();
-  const daysInMonth = new Date(YEAR, month + 1, 0).getDate();
-  const dayProgress = (now.getDate() - 1) / daysInMonth;
-  const angle = -(month + dayProgress) * (360 / 12);
-  svg.querySelectorAll('.now-indicator').forEach(e => e.remove());
-  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-  line.classList.add('now-indicator'); line.setAttribute('x1',cx); line.setAttribute('y1',cy-startRadius);
-  line.setAttribute('x2',cx); line.setAttribute('y2',cy-outerRadius);
-  line.setAttribute('stroke','#e53935'); line.setAttribute('stroke-width','2');
-  line.setAttribute('transform',`rotate(${angle} ${cx} ${cy})`);
-  const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
-  dot.classList.add('now-indicator'); dot.setAttribute('cx',cx); dot.setAttribute('cy',cy-outerRadius);
-  dot.setAttribute('r','5'); dot.setAttribute('fill','#e53935'); dot.style.filter='drop-shadow(0 0 6px #e53935)';
-  dot.setAttribute('transform',`rotate(${angle} ${cx} ${cy})`);
-  svg.appendChild(line); svg.appendChild(dot);
-  setTimeout(addOrUpdateNowIndicator,60000);
+  const nowEvent = {
+    startDate: now,
+    endDate: now,
+    _label: 'Now',
+    color: '#e53935'
+  };
+
+  timeline.setData([nowEvent], 'Now'); // Circalify places it correctly
+
+  // Update every minute
+  setTimeout(updateNowEvent, 60_000);
 }
-requestAnimationFrame(addOrUpdateNowIndicator);
+
+updateNowEvent();
 </script>
 
 </body>
