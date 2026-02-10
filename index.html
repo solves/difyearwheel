@@ -7,39 +7,53 @@
     body { font-family: sans-serif; }
     #timeline { width: 600px; height: 600px; margin: auto; }
 
-  #legend {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    margin-top: 12px;
-    font-size: 13px;
-  }
+    #legend {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
 
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-  .legend-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-  }
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
 
-    
+    /* Tooltip */
+    #tooltip {
+      position: fixed;
+      pointer-events: none;
+      background: rgba(0,0,0,0.85);
+      color: white;
+      padding: 6px 8px;
+      font-size: 12px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.1s;
+      z-index: 10;
+    }
+
   </style>
 </head>
 <body>
 
 <div id="legend"></div>
 <div id="timeline"></div>
-
+<div id="tooltip"></div>
 
 <script type="module">
   import CircularTimeline from 'https://unpkg.com/circalify@latest/src/index.js';
   import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm';
 
+  // --- Load CSV ---
   async function loadCSV(url) {
     const response = await fetch(url);
     const text = await response.text();
@@ -58,6 +72,7 @@
       endDate: new Date(e.endDate)
     }));
 
+  // --- Timeline ---
   const timeline = new CircularTimeline('#timeline', {
     startYear: 2026,
     startMonth: 0,
@@ -70,118 +85,120 @@
     ]
   });
 
-  timeline.setData(events.filter(e => e.ring === 'Cuper'), 'Cuper');
-  timeline.setData(events.filter(e => e.ring === 'Kamper'), 'Kamper');
-  timeline.setData(events.filter(e => e.ring === 'Annet'), 'Annet');
+  // Attach _label to each event for tooltip
+  timeline.setData(
+    events.filter(e => e.ring === 'Cuper').map(e => ({ ...e, _label: e.title })),
+    'Cuper'
+  );
+  timeline.setData(
+    events.filter(e => e.ring === 'Kamper').map(e => ({ ...e, _label: e.title })),
+    'Kamper'
+  );
+  timeline.setData(
+    events.filter(e => e.ring === 'Annet').map(e => ({ ...e, _label: e.title })),
+    'Annet'
+  );
 
+  // --- Hover Tooltip ---
+  const tooltip = document.getElementById('tooltip');
   requestAnimationFrame(() => {
-  document
-    .querySelectorAll('#timeline svg path')
-    .forEach((path, i) => {
-      const event = events[i];
-      if (!event?.title) return;
+    document.querySelectorAll('#timeline svg path').forEach(path => {
+      const label = path.__data__?._label;
+      if (!label) return;
 
-      const title = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'title'
-      );
-      title.textContent = event.title;
+      // Native tooltip (optional)
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      title.textContent = label;
       path.appendChild(title);
+
+      // Custom styled tooltip
+      path.addEventListener('mouseenter', () => {
+        tooltip.textContent = label;
+        tooltip.style.opacity = 1;
+      });
+      path.addEventListener('mousemove', e => {
+        tooltip.style.left = e.clientX + 10 + 'px';
+        tooltip.style.top = e.clientY + 10 + 'px';
+      });
+      path.addEventListener('mouseleave', () => {
+        tooltip.style.opacity = 0;
+      });
     });
-});
+  });
 
-
-
+  // --- Legend ---
   const legend = document.getElementById('legend');
+  [
+    { name: 'Kamper', color: '#0078D4' },
+    { name: 'Cuper', color: '#edbd4c' },
+    { name: 'Annet', color: '#cda2de' }
+  ].forEach(ring => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
 
-[
-  { name: 'Kamper', color: '#0078D4' },
-  { name: 'Cuper', color: '#edbd4c' },
-  { name: 'Annet', color: '#cda2de' }
-].forEach(ring => {
-  const item = document.createElement('div');
-  item.className = 'legend-item';
+    const color = document.createElement('div');
+    color.className = 'legend-color';
+    color.style.background = ring.color;
 
-  const color = document.createElement('div');
-  color.className = 'legend-color';
-  color.style.background = ring.color;
+    const label = document.createElement('span');
+    label.textContent = ring.name;
 
-  const label = document.createElement('span');
-  label.textContent = ring.name;
+    item.appendChild(color);
+    item.appendChild(label);
+    legend.appendChild(item);
+  });
 
-  item.appendChild(color);
-  item.appendChild(label);
-  legend.appendChild(item);
-});
+  // --- "Now" Indicator ---
+  function addOrUpdateNowIndicator() {
+    const svg = document.querySelector('#timeline svg');
+    if (!svg) return;
 
+    const year = 2026;
+    const now = new Date();
+    if (now.getFullYear() !== year) return;
 
-function addOrUpdateNowIndicator() {
-  const svg = document.querySelector('#timeline svg');
-  if (!svg) return;
+    const startOfYear = new Date(year, 0, 1);
+    const endOfYear = new Date(year + 1, 0, 1);
+    const progress = (now - startOfYear) / (endOfYear - startOfYear);
+    const angle = progress * 360;
 
-  const year = 2026;
-  const now = new Date();
-  if (now.getFullYear() !== year) return;
+    const size = 300; // half of 600px
+    const center = size;
+    const innerRadius = 70;
+    const outerRadius = size - 10;
 
-  // Fraction through the year (accounts for month lengths & leap years)
-  const startOfYear = new Date(year, 0, 1);
-  const endOfYear = new Date(year + 1, 0, 1);
-  const progress = (now - startOfYear) / (endOfYear - startOfYear);
+    // Remove previous indicator
+    svg.querySelectorAll('.now-indicator').forEach(el => el.remove());
 
-  const angle = progress * 360; // Full circle
+    // --- Line ---
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.classList.add('now-indicator');
+    line.setAttribute('x1', center);
+    line.setAttribute('y1', center - innerRadius);
+    line.setAttribute('x2', center);
+    line.setAttribute('y2', center - outerRadius);
+    line.setAttribute('stroke', '#e53935');
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('transform', `rotate(${angle} ${center} ${center})`);
 
-  const size = 300; // half of 600px
-  const center = size;
-  const innerRadius = 70;
-  const outerRadius = size - 10;
+    // --- Dot ---
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.classList.add('now-indicator');
+    dot.setAttribute('cx', center);
+    dot.setAttribute('cy', center - outerRadius);
+    dot.setAttribute('r', '5');
+    dot.setAttribute('fill', '#e53935');
+    dot.style.filter = 'drop-shadow(0 0 6px #e53935)';
+    dot.setAttribute('transform', `rotate(${angle} ${center} ${center})`);
 
-  // Remove previous indicator
-  svg.querySelectorAll('.now-indicator').forEach(el => el.remove());
+    svg.appendChild(line);
+    svg.appendChild(dot);
+  }
 
-  // --- LINE ---
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-  line.classList.add('now-indicator');
-  line.setAttribute('x1', center);
-  line.setAttribute('y1', center - innerRadius);
-  line.setAttribute('x2', center);
-  line.setAttribute('y2', center - outerRadius);
-  line.setAttribute('stroke', '#e53935');
-  line.setAttribute('stroke-width', '2');
-  line.setAttribute(
-    'transform',
-    `rotate(${angle} ${center} ${center})`
-  );
-
-  // --- DOT ---
-  const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  dot.classList.add('now-indicator');
-  dot.setAttribute('cx', center);
-  dot.setAttribute('cy', center - outerRadius);
-  dot.setAttribute('r', '5');
-  dot.setAttribute('fill', '#e53935');
-  dot.style.filter = 'drop-shadow(0 0 6px #e53935)';
-  dot.setAttribute(
-    'transform',
-    `rotate(${angle} ${center} ${center})`
-  );
-
-  svg.appendChild(line);
-  svg.appendChild(dot);
-}
-
-// Initial render
-requestAnimationFrame(addOrUpdateNowIndicator);
-
-// Update every minute
-setInterval(addOrUpdateNowIndicator, 60 * 1000);
-
-
-
-
+  requestAnimationFrame(addOrUpdateNowIndicator);
+  setInterval(addOrUpdateNowIndicator, 60 * 1000);
 
 </script>
 
-
 </body>
 </html>
-
