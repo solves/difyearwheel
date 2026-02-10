@@ -115,35 +115,33 @@
 });
 
 
-  function addOrUpdateNowIndicator() {
+function addOrUpdateNowIndicator() {
   const svg = document.querySelector('#timeline svg');
   if (!svg) return;
 
   const year = 2026;
   const now = new Date();
-
   if (now.getFullYear() !== year) return;
 
-  const startOfYear = new Date(year, 0, 1);
-  const endOfYear = new Date(year + 1, 0, 1);
+  const month = now.getMonth(); // 0–11
+  const day = now.getDate();
 
-  const progress =
-    (now - startOfYear) / (endOfYear - startOfYear);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const angle = progress * 360 - 90;
+  // Month-based progress (THIS is the key fix)
+  const monthProgress = month + (day - 1) / daysInMonth;
+  const angle = (monthProgress / 12) * 360 - 90;
 
-  const size = 300;           // half of 600px
+  const size = 300;
   const center = size;
   const innerRadius = 70;
   const outerRadius = size - 10;
 
-  // Remove old indicator if it exists
   svg.querySelectorAll('.now-indicator').forEach(el => el.remove());
 
-  // --- LINE ---
+  // LINE
   const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
   line.classList.add('now-indicator');
-
   line.setAttribute('x1', center);
   line.setAttribute('y1', center - innerRadius);
   line.setAttribute('x2', center);
@@ -155,44 +153,26 @@
     `rotate(${angle} ${center} ${center})`
   );
 
-  // --- DOT ---
+  // DOT
   const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   dot.classList.add('now-indicator');
-
   dot.setAttribute('cx', center);
   dot.setAttribute('cy', center - outerRadius);
   dot.setAttribute('r', '5');
   dot.setAttribute('fill', '#e53935');
+  dot.style.filter = 'drop-shadow(0 0 6px #e53935)';
   dot.setAttribute(
-    'transform',
-    `rotate(${angle} ${center} ${center})`
-  );
-
-  // --- LABEL ---
-  const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  label.classList.add('now-indicator');
-
-  label.textContent = 'Now';
-  label.setAttribute('x', center);
-  label.setAttribute('y', center - outerRadius - 10);
-  label.setAttribute('fill', '#e53935');
-  label.setAttribute('font-size', '11');
-  label.setAttribute('text-anchor', 'middle');
-  label.setAttribute(
     'transform',
     `rotate(${angle} ${center} ${center})`
   );
 
   svg.appendChild(line);
   svg.appendChild(dot);
-  svg.appendChild(label);
 }
 
-// Initial render
 requestAnimationFrame(addOrUpdateNowIndicator);
-
-// Update every minute
 setInterval(addOrUpdateNowIndicator, 60 * 1000);
+
 
 
 </script>
