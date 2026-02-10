@@ -125,12 +125,10 @@ function addOrUpdateNowIndicator() {
 
   const month = now.getMonth(); // 0–11
   const day = now.getDate();
-
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  // Month-based progress (THIS is the key fix)
   const monthProgress = month + (day - 1) / daysInMonth;
-  const angle = (monthProgress / 12) * 360 - 90;
+  const angle = (monthProgress / 12) * 360; // ✅ NO -90
 
   const size = 300;
   const center = size;
@@ -139,7 +137,6 @@ function addOrUpdateNowIndicator() {
 
   svg.querySelectorAll('.now-indicator').forEach(el => el.remove());
 
-  // LINE
   const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
   line.classList.add('now-indicator');
   line.setAttribute('x1', center);
@@ -153,7 +150,6 @@ function addOrUpdateNowIndicator() {
     `rotate(${angle} ${center} ${center})`
   );
 
-  // DOT
   const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   dot.classList.add('now-indicator');
   dot.setAttribute('cx', center);
@@ -172,6 +168,7 @@ function addOrUpdateNowIndicator() {
 
 requestAnimationFrame(addOrUpdateNowIndicator);
 setInterval(addOrUpdateNowIndicator, 60 * 1000);
+
 
 
 
