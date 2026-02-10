@@ -83,7 +83,6 @@ const timeline = new CircularTimeline('#timeline', {
     { type: 'data', name: 'Annet', color: '#cda2de' },
     { type: 'data', name: 'Kamper', color: '#0078D4' },
     { type: 'data', name: 'Cuper', color: '#edbd4c' },
-    { type: 'data', name: 'Now', color: 'rgba(0,0,0,0.05)' }
   ]
 });
 
@@ -131,7 +130,6 @@ const legend = document.getElementById('legend');
   { name: 'Kamper', color: '#0078D4' },
   { name: 'Cuper', color: '#edbd4c' },
   { name: 'Annet', color: '#cda2de' },
-  { name: 'Now', color: '#e53935' } // include "Now" in legend
 ].forEach(ring => {
   const item = document.createElement('div');
   item.className = 'legend-item';
@@ -147,24 +145,6 @@ const legend = document.getElementById('legend');
   item.appendChild(label);
   legend.appendChild(item);
 });
-
-// --- Now indicator as a moving event ---
-function updateNowEvent() {
-  const now = new Date();
-  const nowEvent = {
-    startDate: now,
-    endDate: now,
-    _label: 'Now',
-    color: '#e53935'
-  };
-
-  timeline.setData([nowEvent], 'Now'); // Circalify places it correctly
-
-  // Update every minute
-  setTimeout(updateNowEvent, 60_000);
-}
-
-updateNowEvent();
 </script>
 
 </body>
