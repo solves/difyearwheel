@@ -114,6 +114,87 @@
   legend.appendChild(item);
 });
 
+
+  function addOrUpdateNowIndicator() {
+  const svg = document.querySelector('#timeline svg');
+  if (!svg) return;
+
+  const year = 2026;
+  const now = new Date();
+
+  if (now.getFullYear() !== year) return;
+
+  const startOfYear = new Date(year, 0, 1);
+  const endOfYear = new Date(year + 1, 0, 1);
+
+  const progress =
+    (now - startOfYear) / (endOfYear - startOfYear);
+
+  const angle = progress * 360 - 90;
+
+  const size = 300;           // half of 600px
+  const center = size;
+  const innerRadius = 70;
+  const outerRadius = size - 10;
+
+  // Remove old indicator if it exists
+  svg.querySelectorAll('.now-indicator').forEach(el => el.remove());
+
+  // --- LINE ---
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.classList.add('now-indicator');
+
+  line.setAttribute('x1', center);
+  line.setAttribute('y1', center - innerRadius);
+  line.setAttribute('x2', center);
+  line.setAttribute('y2', center - outerRadius);
+  line.setAttribute('stroke', '#e53935');
+  line.setAttribute('stroke-width', '2');
+  line.setAttribute(
+    'transform',
+    `rotate(${angle} ${center} ${center})`
+  );
+
+  // --- DOT ---
+  const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  dot.classList.add('now-indicator');
+
+  dot.setAttribute('cx', center);
+  dot.setAttribute('cy', center - outerRadius);
+  dot.setAttribute('r', '5');
+  dot.setAttribute('fill', '#e53935');
+  dot.setAttribute(
+    'transform',
+    `rotate(${angle} ${center} ${center})`
+  );
+
+  // --- LABEL ---
+  const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  label.classList.add('now-indicator');
+
+  label.textContent = 'Now';
+  label.setAttribute('x', center);
+  label.setAttribute('y', center - outerRadius - 10);
+  label.setAttribute('fill', '#e53935');
+  label.setAttribute('font-size', '11');
+  label.setAttribute('text-anchor', 'middle');
+  label.setAttribute(
+    'transform',
+    `rotate(${angle} ${center} ${center})`
+  );
+
+  svg.appendChild(line);
+  svg.appendChild(dot);
+  svg.appendChild(label);
+}
+
+// Initial render
+requestAnimationFrame(addOrUpdateNowIndicator);
+
+// Update every minute
+setInterval(addOrUpdateNowIndicator, 60 * 1000);
+
+
 </script>
 
 
