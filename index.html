@@ -35,4 +35,125 @@
       color: white;
       padding: 6px 8px;
       font-size: 12px;
-      border-radiu
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.1s;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+
+<div id="legend"></div>
+<div id="timeline"></div>
+<div id="tooltip"></div>
+
+<script type="module">
+  import CircularTimeline from 'https://unpkg.com/circalify@latest/src/index.js';
+  import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm';
+
+  const YEAR = 2026;
+  const START_MONTH = 0; // MUST MATCH timeline.startMonth
+
+  async function loadCSV(url) {
+    const response = await fetch(url);
+    const text = await response.text();
+    return Papa.parse(text, { header: true }).data;
+  }
+
+  const rawEvents = await loadCSV(
+    'https://docs.google.com/spreadsheets/d/1ad2DsSE9ZqvgaHzglGBkivileGTSi12WTm-cRzlBE0c/export?format=csv'
+  );
+
+  const events = rawEvents
+    .filter(e => e.ring)
+    .map(e => ({
+      ...e,
+      startDate: new Date(e.startDate),
+      endDate: new Date(e.endDate)
+    }));
+
+  const timeline = new CircularTimeline('#timeline', {
+    startYear: YEAR,
+    startMonth: START_MONTH,
+    numberOfMonths: 12,
+    rings: [
+      { type: 'calendar' },
+      { type: 'data', name: 'Annet', color: '#cda2de' },
+      { type: 'data', name: 'Kamper', color: '#0078D4' },
+      { type: 'data', name: 'Cuper', color: '#edbd4c' }
+    ]
+  });
+
+  timeline.setData(events.filter(e => e.ring === 'Cuper').map(e => ({ ...e, _label: e.title })), 'Cuper');
+  timeline.setData(events.filter(e => e.ring === 'Kamper').map(e => ({ ...e, _label: e.title })), 'Kamper');
+  timeline.setData(events.filter(e => e.ring === 'Annet').map(e => ({ ...e, _label: e.title })), 'Annet');
+
+  // ===============================
+  // NOW INDICATOR (CORRECT & ALIGNED)
+  // ===============================
+  function addOrUpdateNowIndicator() {
+    const svg = document.querySelector('#timeline svg');
+    if (!svg) return;
+
+    const now = new Date();
+    if (now.getFullYear() !== YEAR) return;
+
+    const vb = svg.viewBox?.baseVal;
+    let cx, cy, radius;
+
+    if (vb) {
+      cx = vb.x + vb.width / 2;
+      cy = vb.y + vb.height / 2;
+      radius = Math.min(vb.width, vb.height) / 2;
+    } else {
+      const box = svg.getBBox();
+      cx = box.x + box.width / 2;
+      cy = box.y + box.height / 2;
+      radius = Math.min(box.width, box.height) / 2;
+    }
+
+    const outerRadius = radius - 10;
+    const startRadius = outerRadius - 18;
+
+    const monthAngle = 360 / 12;
+    const month = now.getMonth();
+    const daysInMonth = new Date(YEAR, month + 1, 0).getDate();
+    const dayProgress = (now.getDate() - 1) / daysInMonth;
+
+    const angle =
+      ((month - START_MONTH + dayProgress) * monthAngle)
+      - 90;
+
+    svg.querySelectorAll('.now-indicator').forEach(el => el.remove());
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.classList.add('now-indicator');
+    line.setAttribute('x1', cx);
+    line.setAttribute('y1', cy - startRadius);
+    line.setAttribute('x2', cx);
+    line.setAttribute('y2', cy - outerRadius);
+    line.setAttribute('stroke', '#e53935');
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('transform', `rotate(${angle} ${cx} ${cy})`);
+
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.classList.add('now-indicator');
+    dot.setAttribute('cx', cx);
+    dot.setAttribute('cy', cy - outerRadius);
+    dot.setAttribute('r', '5');
+    dot.setAttribute('fill', '#e53935');
+    dot.style.filter = 'drop-shadow(0 0 6px #e53935)';
+    dot.setAttribute('transform', `rotate(${angle} ${cx} ${cy})`);
+
+    svg.appendChild(line);
+    svg.appendChild(dot);
+
+    setTimeout(addOrUpdateNowIndicator, 60_000);
+  }
+
+  requestAnimationFrame(addOrUpdateNowIndicator);
+</script>
+
+</body>
+</html>
