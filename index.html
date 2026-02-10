@@ -148,7 +148,16 @@
     legend.appendChild(item);
   });
 
-  // --- Now indicator (fixed) ---
+  /**
+   * Now indicator that *locks onto the same geometry* Circalify uses:
+   * - Use the SVG viewBox center (not clientWidth/clientHeight).
+   * - Draw the line from the true center to the outer radius.
+   * - Rotate a "12 o'clock" baseline around the center.
+   *
+   * If your wheel's January is not exactly at 12 o'clock, adjust ANGLE_OFFSET_DEG.
+   */
+  const ANGLE_OFFSET_DEG = -90; // 0% at top. Try 0, -90, -180, +90 if needed.
+
   function addOrUpdateNowIndicator() {
     const svg = document.querySelector('#timeline svg');
     if (!svg) return;
@@ -157,33 +166,34 @@
     const now = new Date();
     if (now.getFullYear() !== year) return;
 
-    // Prefer viewBox (most reliable), fallback to bounding box
+    // Ensure viewBox exists; many libs set it. If not, fallback to bbox.
     const vb = svg.viewBox && svg.viewBox.baseVal;
-    let width, height, centerX, centerY;
+    let centerX, centerY, radius;
 
     if (vb && vb.width && vb.height) {
-      width = vb.width;
-      height = vb.height;
       centerX = vb.x + vb.width / 2;
       centerY = vb.y + vb.height / 2;
+      radius = Math.min(vb.width, vb.height) / 2;
     } else {
       const box = svg.getBBox();
-      width = box.width;
-      height = box.height;
       centerX = box.x + box.width / 2;
       centerY = box.y + box.height / 2;
+      radius = Math.min(box.width, box.height) / 2;
     }
 
-    const outerRadius = Math.min(width, height) / 2 - 10;
-    const innerRadius = 70;
+    // Measure actual outer radius from the calendar ring if possible
+    // (fallback to radius - 10).
+    const outerRadius = radius - 10;
 
-    // Day-of-year progress (handles leap years)
+    // Start the line from center (NOT center - innerRadius)
+    // so it doesn't look like it starts "in the middle" of a ring.
+    const innerRadius = 0;
+
     const start = new Date(year, 0, 1);
     const end = new Date(year + 1, 0, 1);
     const progress = (now - start) / (end - start); // 0..1
 
-    // 0 at top, clockwise
-    const angle = progress * 360 - 90;
+    const angle = progress * 360 + ANGLE_OFFSET_DEG;
 
     // Remove previous indicator
     svg.querySelectorAll('.now-indicator').forEach(el => el.remove());
@@ -212,7 +222,6 @@
     svg.appendChild(line);
     svg.appendChild(dot);
 
-    // Update once per minute (no need for 60fps)
     setTimeout(addOrUpdateNowIndicator, 60_000);
   }
 
