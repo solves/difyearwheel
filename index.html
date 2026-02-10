@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>DIF 2017 Yearly Wheel</title>
+  <title>DIF 2026 Yearly Wheel</title>
   <style>
     body { font-family: sans-serif; }
 
@@ -28,7 +28,6 @@
       border-radius: 50%;
     }
 
-    /* Tooltip */
     #tooltip {
       position: fixed;
       pointer-events: none;
@@ -53,7 +52,6 @@
   import CircularTimeline from 'https://unpkg.com/circalify@latest/src/index.js';
   import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm';
 
-  // --- Load CSV ---
   async function loadCSV(url) {
     const response = await fetch(url);
     const text = await response.text();
@@ -72,7 +70,6 @@
       endDate: new Date(e.endDate)
     }));
 
-  // --- Timeline ---
   const timeline = new CircularTimeline('#timeline', {
     startYear: 2026,
     startMonth: 0,
@@ -85,7 +82,6 @@
     ]
   });
 
-  // Attach _label to each event for tooltip
   timeline.setData(
     events.filter(e => e.ring === 'Cuper').map(e => ({ ...e, _label: e.title })),
     'Cuper'
@@ -99,19 +95,17 @@
     'Annet'
   );
 
-  // --- Hover Tooltip ---
+  // --- Tooltip ---
   const tooltip = document.getElementById('tooltip');
   requestAnimationFrame(() => {
     document.querySelectorAll('#timeline svg path').forEach(path => {
       const label = path.__data__?._label;
       if (!label) return;
 
-      // Native tooltip (optional)
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
       title.textContent = label;
       path.appendChild(title);
 
-      // Custom styled tooltip
       path.addEventListener('mouseenter', () => {
         tooltip.textContent = label;
         tooltip.style.opacity = 1;
@@ -148,15 +142,10 @@
     legend.appendChild(item);
   });
 
-  /**
-   * Now indicator that *locks onto the same geometry* Circalify uses:
-   * - Use the SVG viewBox center (not clientWidth/clientHeight).
-   * - Draw the line from the true center to the outer radius.
-   * - Rotate a "12 o'clock" baseline around the center.
-   *
-   * If your wheel's January is not exactly at 12 o'clock, adjust ANGLE_OFFSET_DEG.
-   */
-  const ANGLE_OFFSET_DEG = -90; // 0% at top. Try 0, -90, -180, +90 if needed.
+  // ===============================
+  // NOW INDICATOR (CORRECT + ALIGNED)
+  // ===============================
+  const ANGLE_OFFSET_DEG = -90;
 
   function addOrUpdateNowIndicator() {
     const svg = document.querySelector('#timeline svg');
@@ -166,8 +155,7 @@
     const now = new Date();
     if (now.getFullYear() !== year) return;
 
-    // Ensure viewBox exists; many libs set it. If not, fallback to bbox.
-    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const vb = svg.viewBox?.baseVal;
     let centerX, centerY, radius;
 
     if (vb && vb.width && vb.height) {
@@ -181,35 +169,30 @@
       radius = Math.min(box.width, box.height) / 2;
     }
 
-    // Measure actual outer radius from the calendar ring if possible
-    // (fallback to radius - 10).
     const outerRadius = radius - 10;
+    const startRadius = outerRadius - 18;
 
-    // Start the line from center (NOT center - innerRadius)
-    // so it doesn't look like it starts "in the middle" of a ring.
-    const innerRadius = 0;
+    const monthAngle = 360 / 12;
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const dayProgress = (now.getDate() - 1) / daysInMonth;
 
-    const start = new Date(year, 0, 1);
-    const end = new Date(year + 1, 0, 1);
-    const progress = (now - start) / (end - start); // 0..1
+    const angle =
+      (month + dayProgress) * monthAngle +
+      ANGLE_OFFSET_DEG;
 
-    const angle = progress * 360 + ANGLE_OFFSET_DEG;
-
-    // Remove previous indicator
     svg.querySelectorAll('.now-indicator').forEach(el => el.remove());
 
-    // --- LINE ---
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.classList.add('now-indicator');
     line.setAttribute('x1', centerX);
-    line.setAttribute('y1', centerY - innerRadius);
+    line.setAttribute('y1', centerY - startRadius);
     line.setAttribute('x2', centerX);
     line.setAttribute('y2', centerY - outerRadius);
     line.setAttribute('stroke', '#e53935');
     line.setAttribute('stroke-width', '2');
     line.setAttribute('transform', `rotate(${angle} ${centerX} ${centerY})`);
 
-    // --- DOT ---
     const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     dot.classList.add('now-indicator');
     dot.setAttribute('cx', centerX);
