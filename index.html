@@ -6,21 +6,25 @@
   <style>
     body { font-family: sans-serif; }
     #timeline { width: 600px; height: 600px; margin: auto; }
+    #legend { display: flex; justify-content: center; gap: 16px; margin-top: 12px; font-size: 13px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-color { width: 12px; height: 12px; border-radius: 50%; }
+    #tooltip { position: fixed; pointer-events: none; background: rgba(0,0,0,0.85); color: white; padding: 6px 8px; font-size: 12px; border-radius: 4px; opacity: 0; transition: opacity 0.1s; z-index: 10; }
   </style>
 </head>
 <body>
 
+<div id="legend"></div>
 <div id="timeline"></div>
+<div id="tooltip"></div>
 
 <script type="module">
 import CircularTimeline from 'https://unpkg.com/circalify@latest/src/index.js';
 import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm';
 
 const YEAR = 2026;
+const START_MONTH = 0;
 
-/* -----------------------------
-   LOAD DATA (UNCHANGED)
------------------------------ */
 async function loadCSV(url) {
   const response = await fetch(url);
   const text = await response.text();
@@ -31,20 +35,15 @@ const rawEvents = await loadCSV(
   'https://docs.google.com/spreadsheets/d/1ad2DsSE9ZqvgaHzglGBkivileGTSi12WTm-cRzlBE0c/export?format=csv'
 );
 
-const events = rawEvents
-  .filter(e => e.ring)
-  .map(e => ({
-    ...e,
-    startDate: new Date(e.startDate),
-    endDate: new Date(e.endDate)
-  }));
+const events = rawEvents.filter(e => e.ring).map(e => ({
+  ...e,
+  startDate: new Date(e.startDate),
+  endDate: new Date(e.endDate)
+}));
 
-/* -----------------------------
-   TIMELINE (UNCHANGED)
------------------------------ */
 const timeline = new CircularTimeline('#timeline', {
   startYear: YEAR,
-  startMonth: 0,
+  startMonth: START_MONTH,
   numberOfMonths: 12,
   rings: [
     { type: 'calendar' },
@@ -54,85 +53,67 @@ const timeline = new CircularTimeline('#timeline', {
   ]
 });
 
-timeline.setData(events.filter(e => e.ring === 'Cuper'), 'Cuper');
-timeline.setData(events.filter(e => e.ring === 'Kamper'), 'Kamper');
-timeline.setData(events.filter(e => e.ring === 'Annet'), 'Annet');
+timeline.setData(events.filter(e => e.ring === 'Cuper').map(e => ({ ...e, _label: e.title })), 'Cuper');
+timeline.setData(events.filter(e => e.ring === 'Kamper').map(e => ({ ...e, _label: e.title })), 'Kamper');
+timeline.setData(events.filter(e => e.ring === 'Annet').map(e => ({ ...e, _label: e.title })), 'Annet');
 
-/* ===============================
-   NOW INDICATOR (GEOMETRY-LOCKED)
-   =============================== */
+// Tooltip
+const tooltip = document.getElementById('tooltip');
+requestAnimationFrame(() => {
+  document.querySelectorAll('#timeline svg path').forEach(path => {
+    const label = path.__data__?._label;
+    if (!label) return;
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    title.textContent = label;
+    path.appendChild(title);
+    path.addEventListener('mouseenter', () => { tooltip.textContent = label; tooltip.style.opacity = 1; });
+    path.addEventListener('mousemove', e => { tooltip.style.left = e.clientX + 10 + 'px'; tooltip.style.top = e.clientY + 10 + 'px'; });
+    path.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
+  });
+});
 
-function angleFromPoint(x, y, cx, cy) {
-  return Math.atan2(y - cy, x - cx) * 180 / Math.PI;
-}
+// Legend
+const legend = document.getElementById('legend');
+[
+  { name: 'Kamper', color: '#0078D4' },
+  { name: 'Cuper', color: '#edbd4c' },
+  { name: 'Annet', color: '#cda2de' }
+].forEach(ring => {
+  const item = document.createElement('div'); item.className = 'legend-item';
+  const color = document.createElement('div'); color.className = 'legend-color'; color.style.background = ring.color;
+  const label = document.createElement('span'); label.textContent = ring.name;
+  item.appendChild(color); item.appendChild(label); legend.appendChild(item);
+});
 
-function getJanuaryAngle(svg, cx, cy) {
-  // Find calendar segment whose data month === 0
-  const paths = [...svg.querySelectorAll('path')]
-    .filter(p => p.__data__?.month === 0);
-
-  if (!paths.length) return null;
-
-  const p = paths[0];
-  const len = p.getTotalLength();
-  const mid = p.getPointAtLength(len / 2);
-
-  return angleFromPoint(mid.x, mid.y, cx, cy);
-}
-
+// Now indicator
 function addOrUpdateNowIndicator() {
   const svg = document.querySelector('#timeline svg');
   if (!svg) return;
-
   const now = new Date();
   if (now.getFullYear() !== YEAR) return;
-
   const vb = svg.viewBox.baseVal;
   const cx = vb.x + vb.width / 2;
   const cy = vb.y + vb.height / 2;
   const radius = Math.min(vb.width, vb.height) / 2;
-
-  const januaryAngle = getJanuaryAngle(svg, cx, cy);
-  if (januaryAngle == null) return;
-
+  const outerRadius = radius - 10;
+  const startRadius = outerRadius - 18;
   const month = now.getMonth();
   const daysInMonth = new Date(YEAR, month + 1, 0).getDate();
   const dayProgress = (now.getDate() - 1) / daysInMonth;
-
-  const angle =
-    januaryAngle +
-    (month + dayProgress) * (360 / 12);
-
-  const outerRadius = radius - 10;
-  const startRadius = outerRadius - 18;
-
+  const angle = -(month + dayProgress) * (360 / 12);
   svg.querySelectorAll('.now-indicator').forEach(e => e.remove());
-
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-  line.classList.add('now-indicator');
-  line.setAttribute('x1', cx);
-  line.setAttribute('y1', cy - startRadius);
-  line.setAttribute('x2', cx);
-  line.setAttribute('y2', cy - outerRadius);
-  line.setAttribute('stroke', '#e53935');
-  line.setAttribute('stroke-width', '2');
-  line.setAttribute('transform', `rotate(${angle} ${cx} ${cy})`);
-
-  const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  dot.classList.add('now-indicator');
-  dot.setAttribute('cx', cx);
-  dot.setAttribute('cy', cy - outerRadius);
-  dot.setAttribute('r', 5);
-  dot.setAttribute('fill', '#e53935');
-  dot.style.filter = 'drop-shadow(0 0 6px #e53935)';
-  dot.setAttribute('transform', `rotate(${angle} ${cx} ${cy})`);
-
-  svg.appendChild(line);
-  svg.appendChild(dot);
-
-  setTimeout(addOrUpdateNowIndicator, 60_000);
+  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.classList.add('now-indicator'); line.setAttribute('x1',cx); line.setAttribute('y1',cy-startRadius);
+  line.setAttribute('x2',cx); line.setAttribute('y2',cy-outerRadius);
+  line.setAttribute('stroke','#e53935'); line.setAttribute('stroke-width','2');
+  line.setAttribute('transform',`rotate(${angle} ${cx} ${cy})`);
+  const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  dot.classList.add('now-indicator'); dot.setAttribute('cx',cx); dot.setAttribute('cy',cy-outerRadius);
+  dot.setAttribute('r','5'); dot.setAttribute('fill','#e53935'); dot.style.filter='drop-shadow(0 0 6px #e53935)';
+  dot.setAttribute('transform',`rotate(${angle} ${cx} ${cy})`);
+  svg.appendChild(line); svg.appendChild(dot);
+  setTimeout(addOrUpdateNowIndicator,60000);
 }
-
 requestAnimationFrame(addOrUpdateNowIndicator);
 </script>
 
