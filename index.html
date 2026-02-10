@@ -74,6 +74,23 @@
   timeline.setData(events.filter(e => e.ring === 'Kamper'), 'Kamper');
   timeline.setData(events.filter(e => e.ring === 'Annet'), 'Annet');
 
+  requestAnimationFrame(() => {
+  document
+    .querySelectorAll('#timeline svg path')
+    .forEach((path, i) => {
+      const event = events[i];
+      if (!event?.title) return;
+
+      const title = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'title'
+      );
+      title.textContent = event.title;
+      path.appendChild(title);
+    });
+});
+
+
 
   const legend = document.getElementById('legend');
 
