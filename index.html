@@ -1,120 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>DIF 2017 Yearly Wheel</title>
-  <style>
-    body { font-family: sans-serif; }
-    #timeline { width: 600px; height: 600px; margin: auto; }
-
-  #legend {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    margin-top: 12px;
-    font-size: 13px;
-  }
-
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .legend-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-  }
-
-    
-  </style>
-</head>
-<body>
-
-<div id="legend"></div>
-<div id="timeline"></div>
-
-
-<script type="module">
-  import CircularTimeline from 'https://unpkg.com/circalify@latest/src/index.js';
-  import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm';
-
-  async function loadCSV(url) {
-    const response = await fetch(url);
-    const text = await response.text();
-    return Papa.parse(text, { header: true }).data;
-  }
-
-  const rawEvents = await loadCSV(
-    'https://docs.google.com/spreadsheets/d/1ad2DsSE9ZqvgaHzglGBkivileGTSi12WTm-cRzlBE0c/export?format=csv'
-  );
-
-  const events = rawEvents
-    .filter(e => e.ring)
-    .map(e => ({
-      ...e,
-      startDate: new Date(e.startDate),
-      endDate: new Date(e.endDate)
-    }));
-
-  const timeline = new CircularTimeline('#timeline', {
-    startYear: 2026,
-    startMonth: 0,
-    numberOfMonths: 12,
-    rings: [
-      { type: 'calendar' },
-      { type: 'data', name: 'Annet', color: '#cda2de' },
-      { type: 'data', name: 'Kamper', color: '#0078D4' },
-      { type: 'data', name: 'Cuper', color: '#edbd4c' }
-    ]
-  });
-
-  timeline.setData(events.filter(e => e.ring === 'Cuper'), 'Cuper');
-  timeline.setData(events.filter(e => e.ring === 'Kamper'), 'Kamper');
-  timeline.setData(events.filter(e => e.ring === 'Annet'), 'Annet');
-
-  requestAnimationFrame(() => {
-  document
-    .querySelectorAll('#timeline svg path')
-    .forEach((path, i) => {
-      const event = events[i];
-      if (!event?.title) return;
-
-      const title = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'title'
-      );
-      title.textContent = event.title;
-      path.appendChild(title);
-    });
-});
-
-
-
-  const legend = document.getElementById('legend');
-
-[
-  { name: 'Kamper', color: '#0078D4' },
-  { name: 'Cuper', color: '#edbd4c' },
-  { name: 'Annet', color: '#cda2de' }
-].forEach(ring => {
-  const item = document.createElement('div');
-  item.className = 'legend-item';
-
-  const color = document.createElement('div');
-  color.className = 'legend-color';
-  color.style.background = ring.color;
-
-  const label = document.createElement('span');
-  label.textContent = ring.name;
-
-  item.appendChild(color);
-  item.appendChild(label);
-  legend.appendChild(item);
-});
-
-
 function addOrUpdateNowIndicator() {
   const svg = document.querySelector('#timeline svg');
   if (!svg) return;
@@ -123,20 +6,22 @@ function addOrUpdateNowIndicator() {
   const now = new Date();
   if (now.getFullYear() !== year) return;
 
-  const month = now.getMonth(); // 0–11
-  const day = now.getDate();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  // Fraction through the year (accounts for month lengths & leap years)
+  const startOfYear = new Date(year, 0, 1);
+  const endOfYear = new Date(year + 1, 0, 1);
+  const progress = (now - startOfYear) / (endOfYear - startOfYear);
 
-  const monthProgress = month + (day - 1) / daysInMonth;
-  const angle = (monthProgress / 12) * 360; // ✅ NO -90
+  const angle = progress * 360; // Full circle
 
-  const size = 300;
+  const size = 300; // half of 600px
   const center = size;
   const innerRadius = 70;
   const outerRadius = size - 10;
 
+  // Remove previous indicator
   svg.querySelectorAll('.now-indicator').forEach(el => el.remove());
 
+  // --- LINE ---
   const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
   line.classList.add('now-indicator');
   line.setAttribute('x1', center);
@@ -150,6 +35,7 @@ function addOrUpdateNowIndicator() {
     `rotate(${angle} ${center} ${center})`
   );
 
+  // --- DOT ---
   const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   dot.classList.add('now-indicator');
   dot.setAttribute('cx', center);
@@ -166,14 +52,8 @@ function addOrUpdateNowIndicator() {
   svg.appendChild(dot);
 }
 
+// Initial render
 requestAnimationFrame(addOrUpdateNowIndicator);
+
+// Update every minute
 setInterval(addOrUpdateNowIndicator, 60 * 1000);
-
-
-
-
-</script>
-
-
-</body>
-</html>
