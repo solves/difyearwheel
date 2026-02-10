@@ -5,33 +5,11 @@
   <title>DIF 2026 Yearly Wheel</title>
   <style>
     body { font-family: sans-serif; }
-
     #timeline { width: 600px; height: 600px; margin: auto; }
-
-    #legend {
-      display: flex;
-      justify-content: center;
-      gap: 16px;
-      margin-top: 12px;
-      font-size: 13px;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .legend-color {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-    }
   </style>
 </head>
 <body>
 
-<div id="legend"></div>
 <div id="timeline"></div>
 
 <script type="module">
@@ -40,6 +18,9 @@ import Papa from 'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/+esm';
 
 const YEAR = 2026;
 
+/* -----------------------------
+   LOAD DATA (UNCHANGED)
+----------------------------- */
 async function loadCSV(url) {
   const response = await fetch(url);
   const text = await response.text();
@@ -58,6 +39,9 @@ const events = rawEvents
     endDate: new Date(e.endDate)
   }));
 
+/* -----------------------------
+   TIMELINE (UNCHANGED)
+----------------------------- */
 const timeline = new CircularTimeline('#timeline', {
   startYear: YEAR,
   startMonth: 0,
@@ -75,8 +59,26 @@ timeline.setData(events.filter(e => e.ring === 'Kamper'), 'Kamper');
 timeline.setData(events.filter(e => e.ring === 'Annet'), 'Annet');
 
 /* ===============================
-   NOW INDICATOR (FINAL, CORRECT)
+   NOW INDICATOR (GEOMETRY-LOCKED)
    =============================== */
+
+function angleFromPoint(x, y, cx, cy) {
+  return Math.atan2(y - cy, x - cx) * 180 / Math.PI;
+}
+
+function getJanuaryAngle(svg, cx, cy) {
+  // Find calendar segment whose data month === 0
+  const paths = [...svg.querySelectorAll('path')]
+    .filter(p => p.__data__?.month === 0);
+
+  if (!paths.length) return null;
+
+  const p = paths[0];
+  const len = p.getTotalLength();
+  const mid = p.getPointAtLength(len / 2);
+
+  return angleFromPoint(mid.x, mid.y, cx, cy);
+}
 
 function addOrUpdateNowIndicator() {
   const svg = document.querySelector('#timeline svg');
@@ -90,15 +92,19 @@ function addOrUpdateNowIndicator() {
   const cy = vb.y + vb.height / 2;
   const radius = Math.min(vb.width, vb.height) / 2;
 
-  const outerRadius = radius - 10;
-  const startRadius = outerRadius - 18;
+  const januaryAngle = getJanuaryAngle(svg, cx, cy);
+  if (januaryAngle == null) return;
 
   const month = now.getMonth();
   const daysInMonth = new Date(YEAR, month + 1, 0).getDate();
   const dayProgress = (now.getDate() - 1) / daysInMonth;
 
-  // 🔑 FINAL CORRECT ANGLE
-  const angle = -(month + dayProgress) * (360 / 12);
+  const angle =
+    januaryAngle +
+    (month + dayProgress) * (360 / 12);
+
+  const outerRadius = radius - 10;
+  const startRadius = outerRadius - 18;
 
   svg.querySelectorAll('.now-indicator').forEach(e => e.remove());
 
