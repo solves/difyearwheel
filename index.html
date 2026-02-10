@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>DIF 2017 Yearly Wheel</title>
   <style>
     body { font-family: sans-serif; }
+
     #timeline { width: 600px; height: 600px; margin: auto; }
 
     #legend {
@@ -40,7 +41,6 @@
       transition: opacity 0.1s;
       z-index: 10;
     }
-
   </style>
 </head>
 <body>
@@ -148,64 +148,75 @@
     legend.appendChild(item);
   });
 
-function addOrUpdateNowIndicator() {
-  const svg = document.querySelector('#timeline svg');
-  if (!svg) return;
+  // --- Now indicator (fixed) ---
+  function addOrUpdateNowIndicator() {
+    const svg = document.querySelector('#timeline svg');
+    if (!svg) return;
 
-  const year = 2026;
-  const now = new Date();
-  if (now.getFullYear() !== year) return;
+    const year = 2026;
+    const now = new Date();
+    if (now.getFullYear() !== year) return;
 
-  // --- Dynamic center & size ---
-  const width = svg.clientWidth || 600;
-  const height = svg.clientHeight || 600;
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const outerRadius = Math.min(width, height) / 2 - 10;
-  const innerRadius = 70;
+    // Prefer viewBox (most reliable), fallback to bounding box
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    let width, height, centerX, centerY;
 
-  // --- Fraction of the year ---
-  const startOfYear = new Date(year, 0, 1);
-  const endOfYear = new Date(year + 1, 0, 1);
-  const progress = (now - startOfYear) / (endOfYear - startOfYear);
+    if (vb && vb.width && vb.height) {
+      width = vb.width;
+      height = vb.height;
+      centerX = vb.x + vb.width / 2;
+      centerY = vb.y + vb.height / 2;
+    } else {
+      const box = svg.getBBox();
+      width = box.width;
+      height = box.height;
+      centerX = box.x + box.width / 2;
+      centerY = box.y + box.height / 2;
+    }
 
-  const angle = progress * 360 - 90; // -90° so 0% is top
+    const outerRadius = Math.min(width, height) / 2 - 10;
+    const innerRadius = 70;
 
-  // Remove previous indicator
-  svg.querySelectorAll('.now-indicator').forEach(el => el.remove());
+    // Day-of-year progress (handles leap years)
+    const start = new Date(year, 0, 1);
+    const end = new Date(year + 1, 0, 1);
+    const progress = (now - start) / (end - start); // 0..1
 
-  // --- LINE ---
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-  line.classList.add('now-indicator');
-  line.setAttribute('x1', centerX);
-  line.setAttribute('y1', centerY - innerRadius);
-  line.setAttribute('x2', centerX);
-  line.setAttribute('y2', centerY - outerRadius);
-  line.setAttribute('stroke', '#e53935');
-  line.setAttribute('stroke-width', '2');
-  line.setAttribute('transform', `rotate(${angle} ${centerX} ${centerY})`);
+    // 0 at top, clockwise
+    const angle = progress * 360 - 90;
 
-  // --- DOT ---
-  const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  dot.classList.add('now-indicator');
-  dot.setAttribute('cx', centerX);
-  dot.setAttribute('cy', centerY - outerRadius);
-  dot.setAttribute('r', '5');
-  dot.setAttribute('fill', '#e53935');
-  dot.style.filter = 'drop-shadow(0 0 6px #e53935)';
-  dot.setAttribute('transform', `rotate(${angle} ${centerX} ${centerY})`);
+    // Remove previous indicator
+    svg.querySelectorAll('.now-indicator').forEach(el => el.remove());
 
-  svg.appendChild(line);
-  svg.appendChild(dot);
+    // --- LINE ---
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.classList.add('now-indicator');
+    line.setAttribute('x1', centerX);
+    line.setAttribute('y1', centerY - innerRadius);
+    line.setAttribute('x2', centerX);
+    line.setAttribute('y2', centerY - outerRadius);
+    line.setAttribute('stroke', '#e53935');
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('transform', `rotate(${angle} ${centerX} ${centerY})`);
 
-  // --- Smooth animation ---
+    // --- DOT ---
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.classList.add('now-indicator');
+    dot.setAttribute('cx', centerX);
+    dot.setAttribute('cy', centerY - outerRadius);
+    dot.setAttribute('r', '5');
+    dot.setAttribute('fill', '#e53935');
+    dot.style.filter = 'drop-shadow(0 0 6px #e53935)';
+    dot.setAttribute('transform', `rotate(${angle} ${centerX} ${centerY})`);
+
+    svg.appendChild(line);
+    svg.appendChild(dot);
+
+    // Update once per minute (no need for 60fps)
+    setTimeout(addOrUpdateNowIndicator, 60_000);
+  }
+
   requestAnimationFrame(addOrUpdateNowIndicator);
-}
-
-// Start animation
-requestAnimationFrame(addOrUpdateNowIndicator);
-
-
 </script>
 
 </body>
